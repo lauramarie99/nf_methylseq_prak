@@ -802,8 +802,8 @@ if( params.aligner == 'bwameth' ){
             set val(name), file(bam) from ch_bam_sorted_for_markDuplicates
 
             output:
-            set val(name), file("${bam.baseName}.markDups.bam") into ch_bam_dedup_for_methyldackel, ch_bam_dedup_for_qualimap
-            set val(name), file("${bam.baseName}.markDups.bam.bai") into ch_bam_index_for_methyldackel //ToDo check if this correctly overrides the original channel
+            set val(name), file("${bam.baseName}.markDups.bam") into ch_bam_dedup_for_methyldackel, ch_bam_dedup_for_qualimap, ch_bam_for_mosdepth
+            set val(name), file("${bam.baseName}.markDups.bam.bai") into ch_bam_index_for_methyldackel, ch_bam_index_for_mosdepth //ToDo check if this correctly overrides the original channel
             file "${bam.baseName}.markDups_metrics.txt" into ch_markDups_results_for_multiqc
 
             script:
