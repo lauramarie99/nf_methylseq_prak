@@ -802,7 +802,7 @@ if( params.aligner == 'bwameth' ){
             set val(name), file(bam) from ch_bam_sorted_for_markDuplicates
 
             output:
-            set val(name), file("${bam.baseName}.markDups.bam") into ch_bam_dedup_for_methyldackel, ch_bam_dedup_for_qualimap, ch_bam_for_mosdepth
+            set val(name), file("${bam.baseName}.markDups.bam") into ch_bam_dedup_for_methyldackel, ch_bam_dedup_for_qualimap, ch_bam_dedup_for_mosdepth
             set val(name), file("${bam.baseName}.markDups.bam.bai") into ch_bam_index_for_methyldackel, ch_bam_index_for_mosdepth //ToDo check if this correctly overrides the original channel
             file "${bam.baseName}.markDups_metrics.txt" into ch_markDups_results_for_multiqc
 
@@ -925,6 +925,33 @@ process preseq {
 }
 
 /*
+ * Mosdepth
+ */
+ Channel
+        .fromFilePairs(params.input_bed, size: 1)
+        .ifEmpty { exit 1, "Cannot find any bed files matching: ${params.input_bed}"}
+        .into { ch_bed_files_for_mosdepth }
+ ch_mosdepth = ch_bam_dedup_for_mosdepth.join(ch_bam_index_for_mosdepth).join(ch_bed_files_for_mosdepth)
+
+ process mosdepth {
+    publishDir "${params.outdir}/Mosdepth", mode: params.publish_dir_mode
+
+    input:
+    set val(name), file(bam), file(bam_index), file(bed) from ch_mosdepth
+
+    output:
+    file "${bam.baseName}.mosdepth.region.dist.txt" into ch_mosdepth_results_for_multiqc
+    
+    script:
+    """
+    mosdepth -n -x \\
+    --by ${bed} \\
+    ${bam.baseName} \\
+    ${bam}
+    """
+ }
+
+/*
  * STEP 10 - MultiQC
  */
 process multiqc {
@@ -947,6 +974,7 @@ process multiqc {
     file ('methyldackel/*') from ch_methyldackel_results_for_multiqc.flatten().collect().ifEmpty([])
     file ('qualimap/*') from ch_qualimap_results_for_multiqc.collect().ifEmpty([])
     file ('preseq/*') from preseq_results.collect().ifEmpty([])
+    file ('mosdepth/*') from ch_mosdepth_results_for_multiqc.collect().ifEmpty([])
     file ('software_versions/*') from ch_software_versions_yaml_for_multiqc.collect()
     file workflow_summary from ch_workflow_summary.collectFile(name: "workflow_summary_mqc.yaml")
 
@@ -965,7 +993,7 @@ process multiqc {
     custom_config_file = params.multiqc_config ? "--config $mqc_custom_config" : ''
     """
     multiqc -f $rtitle $rfilename $custom_config_file . \\
-        -m custom_content -m picard -m qualimap -m bismark -m samtools -m preseq -m cutadapt -m fastqc
+        -m custom_content -m picard -m qualimap -m bismark -m samtools -m preseq -m cutadapt -m fastqc -m mosdepth
     """
 }
 
