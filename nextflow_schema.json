@@ -26,6 +26,12 @@
                     "fa_icon": "fas fa-align-center",
                     "help_text": "By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--single_end` on the command line when you launch the pipeline. A normal glob pattern, enclosed in quotation marks, can then be used for `--input`. For example:\n\n```bash\n--single_end --input '*.fastq'\n```\n\nIt is not possible to run a mixture of single-end and paired-end files in one run."
                 },
+                "input_bed": {
+                    "type": "string",
+                    "fa_icon": "fas fa-dna",
+                    "description": "Input Bed file.",
+                    "help_text": "Enter your bed file for mosdepth analysis"
+                },
                 "outdir": {
                     "type": "string",
                     "description": "The output directory where the results will be saved.",
