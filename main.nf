@@ -564,12 +564,13 @@ if( params.aligner =~ /bismark/ ){
             tag "$name"
             publishDir "${params.outdir}/bismark_deduplicated", mode: params.publish_dir_mode,
                 saveAs: {filename -> filename.indexOf(".bam") == -1 ? "logs/$filename" : "$filename"}
+            ch_bam_index_for_mosdepth = Channel.empty()
 
             input:
             set val(name), file(bam) from ch_bam_for_bismark_deduplicate
 
             output:
-            set val(name), file("*.deduplicated.bam") into ch_bam_dedup_for_bismark_methXtract, ch_bam_dedup_for_qualimap
+            set val(name), file("*.deduplicated.bam") into ch_bam_dedup_for_bismark_methXtract, ch_bam_dedup_for_qualimap, ch_bam_dedup_for_mosdepth
             set val(name), file("*.deduplication_report.txt") into ch_bismark_dedup_log_for_bismark_report, ch_bismark_dedup_log_for_bismark_summary, ch_bismark_dedup_log_for_multiqc
 
             script:
@@ -927,29 +928,25 @@ process preseq {
 /*
  * Mosdepth
  */
- Channel
-        .fromFilePairs(params.input_bed, size: 1)
-        .ifEmpty { exit 1, "Cannot find any bed files matching: ${params.input_bed}"}
-        .into { ch_bed_files_for_mosdepth }
- ch_mosdepth = ch_bam_dedup_for_mosdepth.join(ch_bam_index_for_mosdepth).join(ch_bed_files_for_mosdepth)
 
- process mosdepth {
-    publishDir "${params.outdir}/Mosdepth", mode: params.publish_dir_mode
+ch_mosdepth = ch_bam_dedup_for_mosdepth.join(ch_bam_index_for_mosdepth)
+process mosdepth {
+    publishDir "${params.outdir}/mosdepth", mode: params.publish_dir_mode
 
     input:
-    set val(name), file(bam), file(bam_index), file(bed) from ch_mosdepth
+    set val(name), file(bam), file(bam_index) from ch_mosdepth
 
     output:
-    file "${bam.baseName}.mosdepth.region.dist.txt" into ch_mosdepth_results_for_multiqc
+    file "${bam.baseName}*" into ch_mosdepth_results_for_multiqc
     
     script:
     """
     mosdepth -n -x \\
-    --by ${bed} \\
+    --by ${params.input_bed} \\
     ${bam.baseName} \\
     ${bam}
     """
- }
+}
 
 /*
  * STEP 10 - MultiQC
