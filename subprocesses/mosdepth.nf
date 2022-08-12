@@ -1,7 +1,7 @@
 // Channels and Parameters
-ch_bed_for_mosdepth = Channel.fromPath("/home/ec2-user/praktikum/testdata/bed_files/Twist_Alliance_Pan-cancer_Methylation_Panel_covered_targets_hg38.bed") 
-ch_bam_for_mosdepth = Channel.fromPath("/home/ec2-user/praktikum/testdata/bam_files/KoM103B_R1_001.sorted.markDups.bam")
-ch_bam_index_for_mosdepth = Channel.fromPath("/home/ec2-user/praktikum/testdata/bam_files/KoM103B_R1_001.sorted.markDups.bam.bai")
+params.bed_file = "/home/ec2-user/praktikum/testdata/bed_files/Twist_Alliance_Pan-cancer_Methylation_Panel_covered_targets_hg38.bed"
+ch_bam_for_mosdepth = Channel.fromPath("/home/ec2-user/praktikum/testdata/bam_files/653-2022_R1_001.sorted.markDups.bam")
+ch_bam_index_for_mosdepth = Channel.fromPath("/home/ec2-user/praktikum/testdata/bam_files/653-2022_R1_001.sorted.markDups.bam.bai")
 ch_multiqc_config = Channel.fromPath('/home/ec2-user/praktikum/nf_methylseq_prak/assets/multiqc_config.yaml', checkIfExists: true)
 params.outdir = "${projectDir}/results"
 params.publish_dir_mode = "copy"
@@ -15,17 +15,17 @@ process mosdepth {
     conda "/home/ec2-user/anaconda3/envs/mosdepth"
 
     input:
-    file bed_file from ch_bed_for_mosdepth
+    
     file bam_file from ch_bam_for_mosdepth
     file bam_index from ch_bam_index_for_mosdepth
 
     output:
-    file "*" into ch_mosdepth_results_for_multiqc
+    file "${params.name}*" into ch_mosdepth_results_for_multiqc
 
     script:
     """
     mosdepth -n -x \\
-    --by ${bed_file} \\
+    --by ${params.bed_file} \\
     ${params.name} \\
     ${bam_file}
     """
@@ -38,7 +38,7 @@ process multiqc {
 
     input:
     file (multiqc_config) from ch_multiqc_config
-    file ('*') from ch_mosdepth_results_for_multiqc.collect().ifEmpty([])
+    file ('mosdepth/*') from ch_mosdepth_results_for_multiqc.collect().ifEmpty([])
 
     output:
     file "*multiqc_report.html" into ch_multiqc_report
