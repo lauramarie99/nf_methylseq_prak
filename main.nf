@@ -930,11 +930,16 @@ process preseq {
  */
 
 ch_mosdepth = ch_bam_dedup_for_mosdepth.join(ch_bam_index_for_mosdepth)
+ch_bedfile = Channel
+            .fromPath(params.input_bed, checkIfExists: true)
+            .ifEmpty { exit 1, "Bed file not found: ${params.input_bed}" }
+
 process mosdepth {
     publishDir "${params.outdir}/mosdepth", mode: params.publish_dir_mode
 
     input:
     set val(name), file(bam), file(bam_index) from ch_mosdepth
+    file bed from ch_bedfile
 
     output:
     file "${bam.baseName}*" into ch_mosdepth_results_for_multiqc
@@ -942,7 +947,7 @@ process mosdepth {
     script:
     """
     mosdepth -n -x \\
-    --by ${params.input_bed} \\
+    --by ${bed} \\
     ${bam.baseName} \\
     ${bam}
     """
