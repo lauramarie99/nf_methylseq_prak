@@ -935,7 +935,6 @@ Channel
     .ifEmpty { exit 1, "Bed file not found: ${params.input_bed}" }
     .set { ch_bedfile }
 ch_mosdepth = ch_bamjoined.combine(ch_bedfile)
-// (a, b, c), d
 
 process mosdepth {
     echo: true
@@ -955,12 +954,10 @@ process mosdepth {
     echo ${bam}
     echo ${bam.baseName}
 
-    cp ${bed} foo.bar
-
-    #mosdepth -n -x \\
-    #--by ${bed.baseName} \\
-    #${bam.baseName} \\
-    #${bam}
+    mosdepth -n -x \\
+    --by ${bed.baseName} \\
+    ${bam.baseName} \\
+    ${bam}
     """
 }
 
