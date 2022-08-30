@@ -943,8 +943,7 @@ process mosdepth {
     set val(name), file(bam), file(bam_index), file(bed) from ch_mosdepth
 
     output:
-    //file "${bam.baseName}*" into ch_mosdepth_results_for_multiqc
-    file "foo.bar"
+    file "${bam.baseName}*" into ch_mosdepth_results_for_multiqc
     
     script:
     """
@@ -954,7 +953,7 @@ process mosdepth {
     echo ${bam.baseName}
 
     mosdepth -n -x \\
-    --by ${bed.baseName} \\
+    --by ${bed} \\
     ${bam.baseName} \\
     ${bam}
     """
