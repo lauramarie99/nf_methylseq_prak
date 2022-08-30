@@ -937,7 +937,6 @@ Channel
 ch_mosdepth = ch_bamjoined.combine(ch_bedfile)
 
 process mosdepth {
-    echo: true
     publishDir "${params.outdir}/mosdepth", mode: params.publish_dir_mode
 
     input:
