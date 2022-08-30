@@ -935,15 +935,18 @@ Channel
     .ifEmpty { exit 1, "Bed file not found: ${params.input_bed}" }
     .set { ch_bedfile }
 ch_mosdepth = ch_bamjoined.combine(ch_bedfile)
+// (a, b, c), d
 
 process mosdepth {
+    echo: true
     publishDir "${params.outdir}/mosdepth", mode: params.publish_dir_mode
 
     input:
     set val(name), file(bam), file(bam_index), file(bed) from ch_mosdepth
 
     output:
-    file "${bam.baseName}*" into ch_mosdepth_results_for_multiqc
+    //file "${bam.baseName}*" into ch_mosdepth_results_for_multiqc
+    file "foo.bar"
     
     script:
     """
@@ -951,10 +954,13 @@ process mosdepth {
     echo ${bed.baseName}
     echo ${bam}
     echo ${bam.baseName}
-    mosdepth -n -x \\
-    --by ${bed.baseName} \\
-    ${bam.baseName} \\
-    ${bam}
+
+    cp ${bed} foo.bar
+
+    #mosdepth -n -x \\
+    #--by ${bed.baseName} \\
+    #${bam.baseName} \\
+    #${bam}
     """
 }
 
