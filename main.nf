@@ -947,11 +947,6 @@ process mosdepth {
     
     script:
     """
-    echo ${bed}
-    echo ${bed.baseName}
-    echo ${bam}
-    echo ${bam.baseName}
-
     mosdepth -n -x \\
     --by ${bed} \\
     ${bam.baseName} \\
