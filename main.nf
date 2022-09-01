@@ -179,6 +179,15 @@ if (params.input_paths) {
         .into { ch_read_files_fastqc; ch_read_files_trimming }
 }
 
+/*
+ * Create a channel for input bed file
+ */
+Channel
+    .fromPath(params.input_bed, checkIfExists: true)
+    .ifEmpty { exit 1, "Bed file not found: ${params.input_bed}" }
+    .into { ch_bedfile_for_mosdepth, ch_bedfile_for_bedtools}
+
+
 ////////////////////////////////////////////////////
 /* --         PRINT PARAMETER SUMMARY          -- */
 ////////////////////////////////////////////////////
@@ -383,7 +392,6 @@ if( !params.fasta_index && params.aligner == 'bwameth' ){
         """
     }
 }
-
 
 /*
  * STEP 1 - FastQC
@@ -849,6 +857,7 @@ if( params.aligner == 'bwameth' ){
 
         output:
         file "${bam.baseName}*" into ch_methyldackel_results_for_multiqc
+        set val(name), file('*.bedGraph') into ch_bedGraph_for_bedtools
 
         script:
         all_contexts = params.comprehensive ? '--CHG --CHH' : ''
@@ -858,6 +867,70 @@ if( params.aligner == 'bwameth' ){
         """
         MethylDackel extract $all_contexts $ignore_flags $methyl_kit $min_depth $fasta $bam
         MethylDackel mbias $all_contexts $ignore_flags $fasta $bam ${bam.baseName} --txt > ${bam.baseName}_methyldackel.txt
+        """
+    }
+
+    /*
+     * Bedtools Intersection
+     */
+    ch_bedtools = ch_bedGraph_for_bedtools.combine(ch_bedfile_for_bedtools)
+    process bedtools_intersect {
+
+        publishDir "${params.outdir}/Bedtools", mode: params.publish_dir_mode
+        container "lauramarie99/bedtools:1"
+
+        input:
+        set val(name), file(bedgraph), file(bed) from ch_bedtools
+
+        output:
+        set val(name), file('*filtered.bedGraph') into ch_bedGraph_for_bgzip
+    
+        script:
+        """
+        bedtools intersect \\
+        -a ${bedgraph} \\
+        -b ${bed} \\
+        > ${bedgraph.baseName}_filtered.bedGraph
+        """
+    }
+
+    /*
+     * Bgzip compression
+     */
+    process bgzip_compr {
+
+        publishDir "${params.outdir}/Bgzip", mode: params.publish_dir_mode
+        container "lauramarie99/htslib:1"
+
+        input:
+        set val(name), file(bedgraph) from ch_bedGraph_for_bgzip
+
+        output:
+        set val(name), file('*.gz') into ch_bedGraph_for_tabix
+    
+        script:
+        """
+        bgzip < ${bedgraph} > ${bedgraph}.gz
+        """
+    }
+
+    /*
+     * Build tabix index
+     */
+    process tabix_index {
+
+        publishDir "${params.outdir}/Bgzip", mode: params.publish_dir_mode
+        container "lauramarie99/htslib:1"
+
+        input:
+        set val(name), file(bedgraph) from ch_bedGraph_for_tabix
+
+        output:
+        set val(name), file('*.tbi')
+    
+        script:
+        """
+        tabix -f --preset=bed --skip-lines=1 ${bedgraph}
         """
     }
 
@@ -928,14 +1001,8 @@ process preseq {
 /*
  * Mosdepth
  */
-
 ch_bamjoined = ch_bam_dedup_for_mosdepth.join(ch_bam_index_for_mosdepth)
-Channel
-    .fromPath(params.input_bed, checkIfExists: true)
-    .ifEmpty { exit 1, "Bed file not found: ${params.input_bed}" }
-    .set { ch_bedfile }
-ch_mosdepth = ch_bamjoined.combine(ch_bedfile)
-
+ch_mosdepth = ch_bamjoined.combine(ch_bedfile_for_mosdepth)
 process mosdepth {
     publishDir "${params.outdir}/mosdepth", mode: params.publish_dir_mode
 
