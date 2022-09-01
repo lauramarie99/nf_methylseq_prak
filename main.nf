@@ -185,7 +185,7 @@ if (params.input_paths) {
 Channel
     .fromPath(params.input_bed, checkIfExists: true)
     .ifEmpty { exit 1, "Bed file not found: ${params.input_bed}" }
-    .into { ch_bedfile_for_mosdepth, ch_bedfile_for_bedtools}
+    .into { ch_bedfile_for_mosdepth; ch_bedfile_for_bedtools}
 
 
 ////////////////////////////////////////////////////
