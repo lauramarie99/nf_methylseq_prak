@@ -871,7 +871,7 @@ if( params.aligner == 'bwameth' ){
     }
 
     /*
-     * Bedtools Intersection
+     * Bedtools intersection
      */
     ch_bedtools = ch_bedGraph_for_bedtools.combine(ch_bedfile_for_bedtools)
     process bedtools_intersect {
@@ -883,7 +883,7 @@ if( params.aligner == 'bwameth' ){
         set val(name), file(bedgraph), file(bed) from ch_bedtools
 
         output:
-        set val(name), file('*filtered.bedGraph') into ch_bedGraph_for_bgzip
+        set val(name), file('*filtered.bedGraph') into ch_bedGraph_for_tabix_index
     
         script:
         """
@@ -895,42 +895,24 @@ if( params.aligner == 'bwameth' ){
     }
 
     /*
-     * Bgzip compression
+     * Bgzip compression and tabix index
      */
-    process bgzip_compr {
+    process tabix_index {
 
-        publishDir "${params.outdir}/Bgzip", mode: params.publish_dir_mode
+        publishDir "${params.outdir}/Tabix", mode: params.publish_dir_mode
         container "lauramarie99/htslib:1"
 
         input:
-        set val(name), file(bedgraph) from ch_bedGraph_for_bgzip
+        set val(name), file(bedgraph) from ch_bedGraph_for_tabix_index
 
         output:
-        set val(name), file('*.gz') into ch_bedGraph_for_tabix
+        file '*.gz'
+        file '*.tbi'
     
         script:
         """
         bgzip < ${bedgraph} > ${bedgraph}.gz
-        """
-    }
-
-    /*
-     * Build tabix index
-     */
-    process tabix_index {
-
-        publishDir "${params.outdir}/Bgzip", mode: params.publish_dir_mode
-        container "lauramarie99/htslib:1"
-
-        input:
-        set val(name), file(bedgraph) from ch_bedGraph_for_tabix
-
-        output:
-        set val(name), file('*.tbi')
-    
-        script:
-        """
-        tabix -f --preset=bed --skip-lines=1 ${bedgraph}
+        tabix -f --preset=bed --skip-lines=1 ${bedgraph}.gz
         """
     }
 
