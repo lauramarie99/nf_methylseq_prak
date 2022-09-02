@@ -981,12 +981,13 @@ process preseq {
 }
 
 /*
- * Mosdepth
+ * Mosdepth local coverage
  */
 ch_bamjoined = ch_bam_dedup_for_mosdepth.join(ch_bam_index_for_mosdepth)
 ch_mosdepth = ch_bamjoined.combine(ch_bedfile_for_mosdepth)
 process mosdepth {
     publishDir "${params.outdir}/mosdepth", mode: params.publish_dir_mode
+    container "lauramarie99/mosdepth:1"
 
     input:
     set val(name), file(bam), file(bam_index), file(bed) from ch_mosdepth
